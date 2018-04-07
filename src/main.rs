@@ -4,7 +4,7 @@ extern crate linefeed;
 mod escape;
 
 use itertools::Itertools;
-use linefeed::{Reader, ReadResult};
+use linefeed::{Reader, ReadResult, Terminal};
 use std::env::args_os;
 use std::ffi::OsString;
 use std::fmt::{self, Display, Formatter};
@@ -21,7 +21,7 @@ fn main() {
     let mut reader = Reader::new("my-application").unwrap();
 
     reader.set_history_size(100);
-    reader.set_prompt(&format!("{} ", cmd));
+    set_prompt(&mut reader, &cmd);
 
     while let Ok(ReadResult::Input(input)) = reader.read_line() {
         {
@@ -36,7 +36,7 @@ fn main() {
                         for opt in rest.iter().skip(1) {
                             cmd.remove_opt(opt);
                         }
-                        reader.set_prompt(&format!("{} ", cmd));
+                        set_prompt(&mut reader, &cmd);
                     } else {
                         eprintln!("Usage: - <option> [<option> ...]");
                     }
@@ -46,7 +46,7 @@ fn main() {
                         for opt in rest.iter().skip(1) {
                             cmd.add_opt(opt);
                         }
-                        reader.set_prompt(&format!("{} ", cmd));
+                        set_prompt(&mut reader, &cmd);
                     } else {
                         eprintln!("Usage: + <option> [<option> ...]");
                     }
@@ -54,7 +54,7 @@ fn main() {
                 "++" => {
                     if rest.len() == 3 {
                         cmd.add_opt_arg(rest.get(1).unwrap(), rest.get(2).unwrap());
-                        reader.set_prompt(&format!("{} ", cmd));
+                        set_prompt(&mut reader, &cmd);
                     } else {
                         eprintln!("Usage: ++ <option> <arg>");
                     }
@@ -75,6 +75,11 @@ fn main() {
     }
 
     println!();
+}
+
+fn set_prompt<T>(reader: &mut Reader<T>, cmd: &Command)
+    where T: Terminal {
+    reader.set_prompt(&format!("> {} ", cmd));
 }
 
 struct Command {
@@ -109,8 +114,8 @@ impl Command {
     }
 
     fn remove_opt(&mut self, opt: &str) {
-        let single_opt = OsString::from(String::from("-") + opt);
-        let double_opt = OsString::from(String::from("--") + opt);
+        let single_opt = OsString::from(String::from("-") + opt.trim_matches('-'));
+        let double_opt = OsString::from(String::from("--") + opt.trim_matches('-'));
         let mut new_args = Vec::new();
 
         {
@@ -144,7 +149,9 @@ impl Command {
     fn add_opt(&mut self, opt: &str) {
         self.remove_opt(opt);
 
-        let full_opt = if opt.len() == 1 {
+        let full_opt = if opt.starts_with("-") {
+            OsString::from(opt)
+        } else if opt.len() == 1 {
             OsString::from(String::from("-") + opt)
         } else {
             OsString::from(String::from("--") + opt)
