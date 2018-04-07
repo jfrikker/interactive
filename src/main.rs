@@ -12,6 +12,11 @@ use std::mem::swap;
 use std::process;
 
 fn main() {
+    if args_os().len() < 2 {
+        eprintln!("Usage: interactive <command>");
+        process::exit(1);
+    }
+
     let mut cmd = Command::new(args_os().skip(1));
     let mut reader = Reader::new("my-application").unwrap();
 
@@ -55,12 +60,13 @@ fn main() {
                     }
                 },
                 _ => {
-                    let mut child = cmd.build_command(&rest)
+                    match cmd.build_command(&rest)
                         .stdin(process::Stdio::inherit())
                         .stdout(process::Stdio::inherit())
-                        .spawn()
-                        .unwrap();
-                    child.wait().unwrap();
+                        .spawn() {
+                        Ok(mut child) => {child.wait().unwrap();},
+                        Err(e) => eprintln!("{}", e)
+                    }
                 }
             }
         }
