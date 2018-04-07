@@ -8,10 +8,11 @@ use linefeed::{Reader, ReadResult};
 use std::env::args_os;
 use std::ffi::OsString;
 use std::fmt::{self, Display, Formatter};
+use std::mem::swap;
 use std::process;
 
 fn main() {
-    let cmd = Command::new(args_os().skip(1));
+    let mut cmd = Command::new(args_os().skip(1));
     let mut reader = Reader::new("my-application").unwrap();
 
     reader.set_history_size(10);
@@ -24,12 +25,44 @@ fn main() {
                 continue;
             }
 
-            let mut child = cmd.build_command(&rest)
-                .stdin(process::Stdio::inherit())
-                .stdout(process::Stdio::inherit())
-                .spawn()
-                .unwrap();
-            child.wait().unwrap();
+            match *rest.get(0).unwrap() {
+                "-" => {
+                    if rest.len() > 0 {
+                        for opt in rest.iter().skip(1) {
+                            cmd.remove_opt(opt);
+                        }
+                        reader.set_prompt(&format!("{} ", cmd));
+                    } else {
+                        eprintln!("Usage: - <option> [<option> ...]");
+                    }
+                },
+                "+" => {
+                    if rest.len() > 0 {
+                        for opt in rest.iter().skip(1) {
+                            cmd.add_opt(opt);
+                        }
+                        reader.set_prompt(&format!("{} ", cmd));
+                    } else {
+                        eprintln!("Usage: + <option> [<option> ...]");
+                    }
+                },
+                "++" => {
+                    if rest.len() == 3 {
+                        cmd.add_opt_arg(rest.get(1).unwrap(), rest.get(2).unwrap());
+                        reader.set_prompt(&format!("{} ", cmd));
+                    } else {
+                        eprintln!("Usage: ++ <option> <arg>");
+                    }
+                },
+                _ => {
+                    let mut child = cmd.build_command(&rest)
+                        .stdin(process::Stdio::inherit())
+                        .stdout(process::Stdio::inherit())
+                        .spawn()
+                        .unwrap();
+                    child.wait().unwrap();
+                }
+            }
         }
 
         reader.add_history(input);
@@ -67,6 +100,56 @@ impl Command {
         let mut cmd = process::Command::new(&self.cmd);
         cmd.args(self.cmdline(rest));
         cmd
+    }
+
+    fn remove_opt(&mut self, opt: &str) {
+        let single_opt = OsString::from(String::from("-") + opt);
+        let double_opt = OsString::from(String::from("--") + opt);
+        let mut new_args = Vec::new();
+
+        {
+            let mut args = self.args.iter().peekable();
+            loop {
+                match args.next() {
+                    None => break,
+                    Some(arg) => {
+                        if arg == &single_opt || arg == &double_opt {
+                            let remove_next = match args.peek() {
+                                Some(next_arg) => {
+                                    !next_arg.to_str().unwrap().starts_with("-")
+                                },
+                                None => false
+                            };
+
+                            if remove_next {
+                                args.next();
+                            }
+                        } else {
+                            new_args.push(arg.clone());
+                        }
+                    }
+                }
+            }
+        }
+
+        swap(&mut self.args, &mut new_args);
+    }
+
+    fn add_opt(&mut self, opt: &str) {
+        self.remove_opt(opt);
+
+        let full_opt = if opt.len() == 1 {
+            OsString::from(String::from("-") + opt)
+        } else {
+            OsString::from(String::from("--") + opt)
+        };
+
+        self.args.push(full_opt);
+    }
+
+    fn add_opt_arg(&mut self, opt: &str, arg: &str) {
+        self.add_opt(opt);
+        self.args.push(OsString::from(arg));
     }
 }
 
