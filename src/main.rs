@@ -15,7 +15,7 @@ fn main() {
     let mut cmd = Command::new(args_os().skip(1));
     let mut reader = Reader::new("my-application").unwrap();
 
-    reader.set_history_size(10);
+    reader.set_history_size(100);
     reader.set_prompt(&format!("{} ", cmd));
 
     while let Ok(ReadResult::Input(input)) = reader.read_line() {
