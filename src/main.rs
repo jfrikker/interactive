@@ -117,8 +117,13 @@ impl Command {
         self.args.retain(|arg| {
             if found_arg {
                 found_arg = false;
-                arg.to_str().unwrap().starts_with("-")
-            } else if arg == &single_opt || arg == &double_opt {
+
+                if !arg.to_str().unwrap().starts_with("-") {
+                    return false;
+                }
+            }
+
+            if arg == &single_opt || arg == &double_opt {
                 found_arg = true;
                 false
             } else {
