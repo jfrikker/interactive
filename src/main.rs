@@ -18,7 +18,7 @@ fn main() {
     }
 
     let mut cmd = Command::new(args_os().skip(1));
-    let mut reader = Reader::new("my-application").unwrap();
+    let mut reader = Reader::new("interactive").unwrap();
 
     reader.set_history_size(100);
     set_prompt(&mut reader, &cmd);
