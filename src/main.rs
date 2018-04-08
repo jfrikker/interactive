@@ -26,12 +26,9 @@ fn main() {
     while let Ok(ReadResult::Input(input)) = reader.read_line() {
         {
             let rest = escape::split_command(&input);
-            if rest.is_empty() {
-                continue;
-            }
-
-            match *rest.get(0).unwrap() {
-                "-" => {
+            match rest.get(0).map(|arg| *arg) {
+                None => {},
+                Some("-") => {
                     if rest.len() > 0 {
                         for opt in rest.iter().skip(1) {
                             cmd.remove_opt(opt);
@@ -41,7 +38,7 @@ fn main() {
                         eprintln!("Usage: - <option> [<option> ...]");
                     }
                 },
-                "+" => {
+                Some("+") => {
                     if rest.len() > 0 {
                         for opt in rest.iter().skip(1) {
                             cmd.add_opt(opt);
@@ -51,7 +48,7 @@ fn main() {
                         eprintln!("Usage: + <option> [<option> ...]");
                     }
                 },
-                "++" => {
+                Some("++") => {
                     if rest.len() == 3 {
                         cmd.add_opt_arg(rest.get(1).unwrap(), rest.get(2).unwrap());
                         set_prompt(&mut reader, &cmd);
