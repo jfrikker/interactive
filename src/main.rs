@@ -8,7 +8,6 @@ use linefeed::{Reader, ReadResult, Terminal};
 use std::env::args_os;
 use std::ffi::OsString;
 use std::fmt::{self, Display, Formatter};
-use std::mem::swap;
 use std::process;
 
 fn main() {
@@ -113,34 +112,19 @@ impl Command {
     fn remove_opt(&mut self, opt: &str) {
         let single_opt = OsString::from(String::from("-") + opt.trim_matches('-'));
         let double_opt = OsString::from(String::from("--") + opt.trim_matches('-'));
-        let mut new_args = Vec::new();
 
-        {
-            let mut args = self.args.iter().peekable();
-            loop {
-                match args.next() {
-                    None => break,
-                    Some(arg) => {
-                        if arg == &single_opt || arg == &double_opt {
-                            let remove_next = match args.peek() {
-                                Some(next_arg) => {
-                                    !next_arg.to_str().unwrap().starts_with("-")
-                                },
-                                None => false
-                            };
-
-                            if remove_next {
-                                args.next();
-                            }
-                        } else {
-                            new_args.push(arg.clone());
-                        }
-                    }
-                }
+        let mut found_arg = false;
+        self.args.retain(|arg| {
+            if found_arg {
+                found_arg = false;
+                arg.to_str().unwrap().starts_with("-")
+            } else if arg == &single_opt || arg == &double_opt {
+                found_arg = true;
+                false
+            } else {
+                true
             }
-        }
-
-        swap(&mut self.args, &mut new_args);
+        });
     }
 
     fn add_opt(&mut self, opt: &str) {
