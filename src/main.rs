@@ -1,13 +1,12 @@
 extern crate itertools;
 extern crate linefeed;
 
+mod command;
 mod escape;
 
-use itertools::Itertools;
+use command::Command;
 use linefeed::{Reader, ReadResult, Terminal};
 use std::env::args_os;
-use std::ffi::OsString;
-use std::fmt::{self, Display, Formatter};
 use std::process;
 
 fn main() {
@@ -76,88 +75,4 @@ fn main() {
 fn set_prompt<T>(reader: &mut Reader<T>, cmd: &Command)
     where T: Terminal {
     reader.set_prompt(&format!("> {} ", cmd));
-}
-
-struct Command {
-    cmd: OsString,
-    args: Vec<OsString>
-}
-
-impl Command {
-    fn new<I>(mut args: I) -> Command
-        where I: Iterator<Item=OsString> {
-        let cmd = args.next().unwrap();
-        let args = args.collect();
-        Command {
-            cmd,
-            args
-        }
-    }
-
-    fn cmdline(&self, rest: &[&str]) -> Vec<OsString> {
-        let mut result =self.args.clone();
-        result.extend(
-            rest.iter()
-                .map(|s| OsString::from(s))
-        );
-        result
-    }
-
-    fn build_command(&self, rest: &[&str]) -> process::Command {
-        let mut cmd = process::Command::new(&self.cmd);
-        cmd.args(self.cmdline(rest));
-        cmd
-    }
-
-    fn remove_opt(&mut self, opt: &str) {
-        let single_opt = OsString::from(String::from("-") + opt.trim_matches('-'));
-        let double_opt = OsString::from(String::from("--") + opt.trim_matches('-'));
-
-        let mut found_arg = false;
-        self.args.retain(|arg| {
-            if found_arg {
-                found_arg = false;
-
-                if !arg.to_str().unwrap().starts_with("-") {
-                    return false;
-                }
-            }
-
-            if arg == &single_opt || arg == &double_opt {
-                found_arg = true;
-                false
-            } else {
-                true
-            }
-        });
-    }
-
-    fn add_opt(&mut self, opt: &str) {
-        self.remove_opt(opt);
-
-        let full_opt = if opt.starts_with("-") {
-            OsString::from(opt)
-        } else if opt.len() == 1 {
-            OsString::from(String::from("-") + opt)
-        } else {
-            OsString::from(String::from("--") + opt)
-        };
-
-        self.args.push(full_opt);
-    }
-
-    fn add_opt_arg(&mut self, opt: &str, arg: &str) {
-        self.add_opt(opt);
-        self.args.push(OsString::from(arg));
-    }
-}
-
-impl Display for Command {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        if self.args.is_empty() {
-            self.cmd.to_str().unwrap().fmt(f)
-        } else {
-            write!(f, "{} {}", self.cmd.to_str().unwrap(), self.args.iter().map(|s| s.to_str().unwrap()).join(" "))
-        }
-    }
 }
