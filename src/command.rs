@@ -161,4 +161,11 @@ mod tests {
         cmd.add_opt_arg("t", "somearg");
         assert_eq!(cmd.to_string(), "cmd -t somearg");
     }
+
+    #[test]
+    fn remove_multi() {
+        let mut cmd = Command::new(vec!("cmd", "-t", "-a", "-t", "-b", "-t"));
+        cmd.remove_opt("t");
+        assert_eq!(cmd.to_string(), "cmd -a -b");
+    }
 }
