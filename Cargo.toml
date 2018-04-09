@@ -3,6 +3,9 @@ name = "interactive"
 version = "0.1.0"
 authors = ["Joe Frikker <jfrikker@gmail.com>"]
 
+[profile.release]
+panic = "abort"
+
 [dependencies]
 linefeed = "0.4"
 itertools = "0.7.8"
