@@ -22,10 +22,14 @@ fn main() {
     set_prompt(&mut reader, &cmd);
 
     while let Ok(ReadResult::Input(input)) = reader.read_line() {
+        let mut add_to_history = true;
+
         {
             let rest = escape::split_command(&input);
             match rest.get(0).map(|arg| *arg) {
-                None => {},
+                None => {
+                    add_to_history = false;
+                },
                 Some("-") => {
                     if rest.len() > 0 {
                         for opt in rest.iter().skip(1) {
@@ -59,14 +63,16 @@ fn main() {
                         .stdin(process::Stdio::inherit())
                         .stdout(process::Stdio::inherit())
                         .spawn() {
-                        Ok(mut child) => {child.wait().unwrap();},
+                        Ok(mut child) => { child.wait().unwrap(); },
                         Err(e) => eprintln!("{}", e)
                     }
                 }
             }
         }
 
-        reader.add_history(input);
+        if add_to_history {
+            reader.add_history(input);
+        }
     }
 
     println!();
