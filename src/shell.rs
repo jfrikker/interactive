@@ -47,37 +47,15 @@ impl <T: Terminal> Shell<T> {
                 false
             },
             Some("-") => {
-                if args.len() > 0 {
-                    self.update_command(|cmd| {
-                        for opt in args.iter().skip(1) {
-                            cmd.remove_opt(opt);
-                        }
-                    });
-                } else {
-                    eprintln!("Usage: - <option> [<option> ...]");
-                }
+                self.remove_opts(&args[1..]);
                 true
             },
             Some("+") => {
-                if args.len() > 0 {
-                    self.update_command(|cmd| {
-                        for opt in args.iter().skip(1) {
-                            cmd.add_opt(opt);
-                        }
-                    });
-                } else {
-                    eprintln!("Usage: + <option> [<option> ...]");
-                }
+                self.add_opts(&args[1..]);
                 true
             },
             Some("++") => {
-                if args.len() == 3 {
-                    self.update_command(|cmd| {
-                        cmd.add_opt_arg(args.get(1).unwrap(), args.get(2).unwrap());
-                    });
-                } else {
-                    eprintln!("Usage: ++ <option> <arg>");
-                }
+                self.add_opt_arg(&args[1..]);
                 true
             },
             _ => {
@@ -90,6 +68,32 @@ impl <T: Terminal> Shell<T> {
                 }
                 true
             }
+        }
+    }
+
+    fn remove_opts(&mut self, args: &[&str]) {
+        self.update_command(|cmd| {
+            for opt in args.iter() {
+                cmd.remove_opt(opt);
+            }
+        });
+    }
+
+    fn add_opts(&mut self, args: &[&str]) {
+        self.update_command(|cmd| {
+            for opt in args.iter() {
+                cmd.add_opt(opt);
+            }
+        });
+    }
+
+    fn add_opt_arg(&mut self, args: &[&str]) {
+        if args.len() == 2 {
+            self.update_command(|cmd| {
+                cmd.add_opt_arg(args.get(0).unwrap(), args.get(1).unwrap());
+            });
+        } else {
+            eprintln!("Usage: ++ <option> <arg>");
         }
     }
 
