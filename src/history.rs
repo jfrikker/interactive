@@ -24,17 +24,14 @@ pub fn read_history(cmd: &OsStr) -> io::Result<HistoryIterator> {
 
 pub fn write_history<'a, I>(cmd: &OsStr, history: I) -> io::Result<()>
     where I: Iterator<Item = &'a str> {
-    match prepare_history_path(cmd)? {
-        None => Ok(()),
-        Some(path) => {
-            let mut f =
-            BufWriter::new(File::create(&path)?);
-            for line in history {
-                writeln!(f, "{}", line)?;
-            }
-            Ok(())
+    if let Some(path) = prepare_history_path(cmd)? {
+        let mut f =
+        BufWriter::new(File::create(&path)?);
+        for line in history {
+            writeln!(f, "{}", line)?;
         }
-    }
+    };
+    Ok(())
 }
 
 fn prepare_history_path(cmd: &OsStr) -> io::Result<Option<PathBuf>> {
@@ -52,16 +49,13 @@ fn prepare_history_path(cmd: &OsStr) -> io::Result<Option<PathBuf>> {
 }
 
 fn ensure_dir(path: &Path) -> io::Result<()> {
-    match metadata(path) {
-        Ok(_) => Ok(()),
-        Err(e) => {
-            if e.kind() == io::ErrorKind::NotFound {
-                create_dir(path)
-            } else {
-                Err(e)
-            }
-        }
-    }
+    metadata(path)
+        .map(|_| ())
+        .or_else(|e| if e.kind() == io::ErrorKind::NotFound {
+            create_dir(path)
+        } else {
+            Err(e)
+        })
 }
 
 pub struct HistoryIterator {
@@ -72,9 +66,7 @@ impl Iterator for HistoryIterator {
     type Item = io::Result<String>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        match self.iter {
-            None => None,
-            Some(ref mut i) => i.next()
-        }
+        self.iter.as_mut()
+            .and_then(|i| i.next())
     }
 }

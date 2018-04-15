@@ -6,22 +6,16 @@ pub fn split_command(line: &str) -> Vec<&str> {
 
     for (i, c) in line.chars().enumerate() {
         if in_single_quote {
-            match c {
-                '\'' => {
-                    result.push(&line[start..i]);
-                    start = i + 1;
-                    in_single_quote = false;
-                }
-                _ => {}
+            if c == '\'' {
+                result.push(&line[start..i]);
+                start = i + 1;
+                in_single_quote = false;
             }
         } else if in_double_quote {
-            match c {
-                '"' => {
-                    result.push(&line[start..i]);
-                    start = i + 1;
-                    in_double_quote = false;
-                }
-                _ => {}
+            if c == '"' {
+                result.push(&line[start..i]);
+                start = i + 1;
+                in_double_quote = false;
             }
         } else {
             match c {

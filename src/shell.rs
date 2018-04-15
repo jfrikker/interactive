@@ -143,9 +143,8 @@ impl <T: Terminal> Shell<T> {
 impl <T: Terminal> Drop for Shell<T> {
     fn drop(&mut self) {
         if self.save_history {
-            match write_history(self.cmd.get_command(), self.reader.history()) {
-                Ok(_) => {},
-                Err(e) => eprintln!("\nError writing history: {}", e)
+            if let Err(e) =  write_history(self.cmd.get_command(), self.reader.history()) {
+                eprintln!("\nError writing history: {}", e);
             }
         }
     }
