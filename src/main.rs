@@ -4,6 +4,7 @@ extern crate linefeed;
 
 mod command;
 mod escape;
+mod history;
 mod shell;
 
 use command::Command;
@@ -17,7 +18,8 @@ fn main() {
     }
 
     let cmd = Command::new(args_os().skip(1));
-    let shell = shell::Shell::new(cmd).unwrap();
+    let mut shell = shell::Shell::new(cmd).unwrap();
+    shell.enable_save_history();
     shell.run();
 
     println!();

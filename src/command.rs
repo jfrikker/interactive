@@ -1,5 +1,5 @@
 use itertools::Itertools;
-use std::ffi::OsString;
+use std::ffi::{OsStr, OsString};
 use std::fmt;
 use std::process;
 
@@ -19,6 +19,10 @@ impl Command {
             cmd,
             args
         }
+    }
+
+    pub fn get_command(&self) -> &OsStr {
+        &self.cmd
     }
 
     fn cmdline(&self, rest: &[&str]) -> Vec<OsString> {

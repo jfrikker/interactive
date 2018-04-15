@@ -1,5 +1,6 @@
 use command::Command;
 use escape::split_command;
+use history::{read_history, write_history};
 use linefeed::{DefaultTerminal, Reader, ReadResult, Terminal};
 use std::io;
 use std::process;
@@ -7,21 +8,13 @@ use std::process;
 pub struct Shell<T: Terminal> {
     reader: Reader<T>,
     cmd: Command,
-    last_cmd: Option<String>
+    last_cmd: Option<String>,
+    save_history: bool
 }
 
 impl Shell<DefaultTerminal> {
     pub fn new(cmd: Command) -> io::Result<Self> {
-        let reader = Reader::new("interactive")?;
-
-        let mut res = Shell {
-            reader,
-            cmd,
-            last_cmd: None
-        };
-
-        res.init();
-        Ok(res)
+        Shell::with_term(DefaultTerminal::new()?, cmd)
     }
 }
 
@@ -33,7 +26,8 @@ impl <T: Terminal> Shell<T> {
         let mut res = Shell {
             reader,
             cmd,
-            last_cmd: None
+            last_cmd: None,
+            save_history: false
         };
 
         res.init();
@@ -44,7 +38,23 @@ impl <T: Terminal> Shell<T> {
         self.update_command(|_| {});
     }
 
+    pub fn enable_save_history(&mut self) {
+        self.save_history = true;
+    }
+
+    fn read_history(&mut self) -> io::Result<()> {
+        for lineres in read_history(self.cmd.get_command())? {
+            let line = lineres?;
+            self.reader.add_history(line);
+        }
+        Ok(())
+    }
+
     pub fn run(mut self) {
+        if self.save_history {
+            self.read_history().err().map(|e| eprintln!("Error reading history: {}", e));
+        }
+
         while let Ok(ReadResult::Input(input)) = self.reader.read_line() {
             self.handle_line(input);
         }
@@ -130,6 +140,17 @@ impl <T: Terminal> Shell<T> {
         if Some(&line) != self.last_cmd.as_ref() {
             self.reader.add_history(line.clone());
             self.last_cmd = Some(line)
+        }
+    }
+}
+
+impl <T: Terminal> Drop for Shell<T> {
+    fn drop(&mut self) {
+        if self.save_history {
+            match write_history(self.cmd.get_command(), self.reader.history()) {
+                Ok(_) => {},
+                Err(e) => eprintln!("\nError writing history: {}", e)
+            }
         }
     }
 }
