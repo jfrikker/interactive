@@ -38,6 +38,7 @@ impl <T: Terminal> Shell<T> {
     }
 
     pub fn enable_save_history(&mut self) {
+        self.read_history().err().map(|e| eprintln!("Error reading history: {}", e));
         self.save_history = true;
     }
 
@@ -50,10 +51,6 @@ impl <T: Terminal> Shell<T> {
     }
 
     pub fn run(mut self) {
-        if self.save_history {
-            self.read_history().err().map(|e| eprintln!("Error reading history: {}", e));
-        }
-
         while let Ok(ReadResult::Input(input)) = self.reader.read_line() {
             self.handle_line(input);
         }
