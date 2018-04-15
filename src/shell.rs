@@ -18,16 +18,38 @@ impl Shell<DefaultTerminal> {
             cmd
         };
 
-        res.update_command(|_| {});
+        res.init();
         Ok(res)
     }
 }
 
 impl <T: Terminal> Shell<T> {
+    #[allow(dead_code)]
+    pub fn with_term(term: T, cmd: Command) -> io::Result<Self> {
+        let reader = Reader::with_term("interactive", term)?;
+
+        let mut res = Shell {
+            reader,
+            cmd
+        };
+
+        res.init();
+        Ok(res)
+    }
+
+    fn init(&mut self) {
+        self.update_command(|_| {});
+    }
+
     pub fn run(mut self) {
         while let Ok(ReadResult::Input(input)) = self.reader.read_line() {
             self.handle_line(input);
         }
+    }
+
+    #[allow(dead_code)]
+    pub fn get_cmd(&self) -> &Command {
+        &self.cmd
     }
 
     pub fn handle_line(&mut self, line: String) {
@@ -101,5 +123,47 @@ impl <T: Terminal> Shell<T> {
         where F: FnOnce(&mut Command) {
         f(&mut self.cmd);
         self.reader.set_prompt(&format!("> {} ", self.cmd));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use linefeed::memory::MemoryTerminal;
+    use linefeed::terminal::Size;
+
+    #[test]
+    fn just_command() {
+        let cmd = Command::new(vec!("cmd"));
+        let term = MemoryTerminal::with_size(Size{lines: 20, columns: 80});
+        let shell = Shell::with_term(term, cmd).unwrap();
+        assert_eq!(shell.get_cmd().to_string(), "cmd");
+    }
+
+    #[test]
+    fn add_opts() {
+        let cmd = Command::new(vec!("cmd"));
+        let term = MemoryTerminal::with_size(Size{lines: 20, columns: 80});
+        let mut shell = Shell::with_term(term, cmd).unwrap();
+        shell.handle_line("+ a b cde".to_string());
+        assert_eq!(shell.get_cmd().to_string(), "cmd -a -b --cde");
+    }
+
+    #[test]
+    fn remove_opts() {
+        let cmd = Command::new(vec!("cmd", "-a", "-b", "arg", "--cde"));
+        let term = MemoryTerminal::with_size(Size{lines: 20, columns: 80});
+        let mut shell = Shell::with_term(term, cmd).unwrap();
+        shell.handle_line("- b cde".to_string());
+        assert_eq!(shell.get_cmd().to_string(), "cmd -a");
+    }
+
+    #[test]
+    fn add_opt_arg() {
+        let cmd = Command::new(vec!("cmd"));
+        let term = MemoryTerminal::with_size(Size{lines: 20, columns: 80});
+        let mut shell = Shell::with_term(term, cmd).unwrap();
+        shell.handle_line("++ opt val".to_string());
+        assert_eq!(shell.get_cmd().to_string(), "cmd --opt val");
     }
 }
