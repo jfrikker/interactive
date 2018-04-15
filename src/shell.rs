@@ -55,7 +55,8 @@ impl <T: Terminal> Shell<T> {
     pub fn handle_line(&mut self, line: String) {
         let add_to_history = {
             let args = split_command(&line);
-            self.execute(&args)
+            self.execute(&args);
+            !args.is_empty()
         };
 
         if add_to_history {
@@ -63,22 +64,17 @@ impl <T: Terminal> Shell<T> {
         }
     }
 
-    fn execute(&mut self, args: &[&str]) -> bool {
+    fn execute(&mut self, args: &[&str]) {
         match args.get(0).map(|arg| *arg) {
-            None => {
-                false
-            },
+            None => {},
             Some("-") => {
                 self.remove_opts(&args[1..]);
-                true
             },
             Some("+") => {
                 self.add_opts(&args[1..]);
-                true
             },
             Some("++") => {
                 self.add_opt_arg(&args[1..]);
-                true
             },
             _ => {
                 match self.cmd.build_command(&args)
@@ -88,7 +84,6 @@ impl <T: Terminal> Shell<T> {
                     Ok(mut child) => { child.wait().unwrap(); },
                     Err(e) => eprintln!("{}", e)
                 }
-                true
             }
         }
     }
