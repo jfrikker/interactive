@@ -55,7 +55,7 @@ impl <T: Terminal> Shell<T> {
     pub fn handle_line(&mut self, line: String) {
         let add_to_history = {
             let args = split_command(&line);
-            self.execute(&args);
+            self.execute(&args).err().map(|e| eprintln!("{}", e));
             !args.is_empty()
         };
 
@@ -64,18 +64,17 @@ impl <T: Terminal> Shell<T> {
         }
     }
 
-    fn execute(&mut self, args: &[&str]) {
+    #[allow(dead_code)]
+    pub fn execute_line(&mut self, line: &str) -> Result<(), Error> {
+        self.execute(&split_command(line))
+    }
+
+    fn execute(&mut self, args: &[&str]) -> Result<(), Error> {
         match args.get(0).map(|arg| *arg) {
-            None => {},
-            Some("-") => {
-                self.remove_opts(&args[1..]);
-            },
-            Some("+") => {
-                self.add_opts(&args[1..]);
-            },
-            Some("++") => {
-                self.add_opt_arg(&args[1..]);
-            },
+            None => Ok(()),
+            Some("-") => self.remove_opts(&args[1..]),
+            Some("+") => self.add_opts(&args[1..]),
+            Some("++") => self.add_opt_arg(&args[1..]),
             _ => {
                 match self.cmd.build_command(&args)
                     .stdin(process::Stdio::inherit())
@@ -84,33 +83,37 @@ impl <T: Terminal> Shell<T> {
                     Ok(mut child) => { child.wait().unwrap(); },
                     Err(e) => eprintln!("{}", e)
                 }
+                Ok(())
             }
         }
     }
 
-    fn remove_opts(&mut self, args: &[&str]) {
+    fn remove_opts(&mut self, args: &[&str]) -> Result<(), Error> {
         self.update_command(|cmd| {
             for opt in args.iter() {
                 cmd.remove_opt(opt);
             }
         });
+        Ok(())
     }
 
-    fn add_opts(&mut self, args: &[&str]) {
+    fn add_opts(&mut self, args: &[&str]) -> Result<(), Error> {
         self.update_command(|cmd| {
             for opt in args.iter() {
                 cmd.add_opt(opt);
             }
         });
+        Ok(())
     }
 
-    fn add_opt_arg(&mut self, args: &[&str]) {
+    fn add_opt_arg(&mut self, args: &[&str]) -> Result<(), Error> {
         if args.len() == 2 {
             self.update_command(|cmd| {
                 cmd.add_opt_arg(args.get(0).unwrap(), args.get(1).unwrap());
             });
+            Ok(())
         } else {
-            eprintln!("Usage: ++ <option> <arg>");
+            Err(Error::Usage("++ <option> <arg>"))
         }
     }
 
@@ -118,6 +121,16 @@ impl <T: Terminal> Shell<T> {
         where F: FnOnce(&mut Command) {
         f(&mut self.cmd);
         self.reader.set_prompt(&format!("> {} ", self.cmd));
+    }
+}
+
+quick_error! {
+    #[derive(Debug)]
+    pub enum Error {
+        Usage(err: &'static str) {
+            display("Usage: {}", err)
+            description(err)
+        }
     }
 }
 
@@ -160,5 +173,23 @@ mod tests {
         let mut shell = Shell::with_term(term, cmd).unwrap();
         shell.handle_line("++ opt val".to_string());
         assert_eq!(shell.get_cmd().to_string(), "cmd --opt val");
+    }
+
+    #[test]
+    fn add_opt_arg_too_few() {
+        let cmd = Command::new(vec!("cmd"));
+        let term = MemoryTerminal::with_size(Size{lines: 20, columns: 80});
+        let mut shell = Shell::with_term(term, cmd).unwrap();
+        let res = shell.execute_line("++ opt");
+        assert_eq!(res.expect_err("Expected error").to_string(), "Usage: ++ <option> <arg>");
+    }
+
+    #[test]
+    fn add_opt_arg_too_many() {
+        let cmd = Command::new(vec!("cmd"));
+        let term = MemoryTerminal::with_size(Size{lines: 20, columns: 80});
+        let mut shell = Shell::with_term(term, cmd).unwrap();
+        let res = shell.execute_line("++ opt arg arg2");
+        assert_eq!(res.expect_err("Expected error").to_string(), "Usage: ++ <option> <arg>");
     }
 }

@@ -9,3 +9,4 @@ panic = "abort"
 [dependencies]
 linefeed = "0.4"
 itertools = "0.7.8"
+quick-error = "1.2.1"
