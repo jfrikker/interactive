@@ -19,7 +19,6 @@ impl Shell<DefaultTerminal> {
 }
 
 impl <T: Terminal> Shell<T> {
-    #[allow(dead_code)]
     pub fn with_term(term: T, cmd: Command) -> io::Result<Self> {
         let reader = Reader::with_term("interactive", term)?;
 
@@ -60,7 +59,7 @@ impl <T: Terminal> Shell<T> {
         }
     }
 
-    #[allow(dead_code)]
+    #[cfg(test)]
     pub fn get_cmd(&self) -> &Command {
         &self.cmd
     }
@@ -77,7 +76,7 @@ impl <T: Terminal> Shell<T> {
         }
     }
 
-    #[allow(dead_code)]
+    #[cfg(test)]
     pub fn execute_line(&mut self, line: &str) -> Result<(), Error> {
         self.execute(&split_command(line))
     }
