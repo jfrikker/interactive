@@ -6,7 +6,8 @@ use std::process;
 
 pub struct Shell<T: Terminal> {
     reader: Reader<T>,
-    cmd: Command
+    cmd: Command,
+    last_cmd: Option<String>
 }
 
 impl Shell<DefaultTerminal> {
@@ -15,7 +16,8 @@ impl Shell<DefaultTerminal> {
 
         let mut res = Shell {
             reader,
-            cmd
+            cmd,
+            last_cmd: None
         };
 
         res.init();
@@ -30,7 +32,8 @@ impl <T: Terminal> Shell<T> {
 
         let mut res = Shell {
             reader,
-            cmd
+            cmd,
+            last_cmd: None
         };
 
         res.init();
@@ -60,7 +63,7 @@ impl <T: Terminal> Shell<T> {
         };
 
         if add_to_history {
-            self.reader.add_history(line);
+            self.add_history(line);
         }
     }
 
@@ -121,6 +124,13 @@ impl <T: Terminal> Shell<T> {
         where F: FnOnce(&mut Command) {
         f(&mut self.cmd);
         self.reader.set_prompt(&format!("> {} ", self.cmd));
+    }
+
+    fn add_history(&mut self, line: String) {
+        if Some(&line) != self.last_cmd.as_ref() {
+            self.reader.add_history(line.clone());
+            self.last_cmd = Some(line)
+        }
     }
 }
 
