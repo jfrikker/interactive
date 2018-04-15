@@ -1,8 +1,10 @@
 use command::Command;
 use escape::split_command;
 use history::{read_history, write_history};
+use itertools::Itertools;
 use linefeed::{DefaultTerminal, Reader, ReadResult, Terminal};
 use std::io;
+use std::iter::Peekable;
 use std::process;
 
 pub struct Shell<T: Terminal> {
@@ -63,9 +65,10 @@ impl <T: Terminal> Shell<T> {
 
     pub fn handle_line(&mut self, line: String) {
         let add_to_history = {
-            let args = split_command(&line);
-            self.execute(&args).err().map(|e| eprintln!("{}", e));
-            !args.is_empty()
+            let mut args = split_command(&line).peekable();
+            let empty = args.peek().is_none();
+            self.execute(args).err().map(|e| eprintln!("{}", e));
+            !empty
         };
 
         if add_to_history {
@@ -75,17 +78,18 @@ impl <T: Terminal> Shell<T> {
 
     #[cfg(test)]
     pub fn execute_line(&mut self, line: &str) -> Result<(), Error> {
-        self.execute(&split_command(line))
+        self.execute(split_command(line).peekable())
     }
 
-    fn execute(&mut self, args: &[&str]) -> Result<(), Error> {
-        match args.get(0).map(|arg| *arg) {
+    fn execute<'a, I>(&mut self, mut args: Peekable<I>) -> Result<(), Error>
+        where I: Iterator<Item=&'a str> {
+        match args.peek().map(|arg| *arg) {
             None => Ok(()),
-            Some("-") => self.remove_opts(&args[1..]),
-            Some("+") => self.add_opts(&args[1..]),
-            Some("++") => self.add_opt_arg(&args[1..]),
+            Some("-") => self.remove_opts(args.skip(1)),
+            Some("+") => self.add_opts(args.skip(1)),
+            Some("++") => self.add_opt_arg(args.skip(1)),
             _ => {
-                match self.cmd.build_command(&args)
+                match self.cmd.build_command(args)
                     .stdin(process::Stdio::inherit())
                     .stdout(process::Stdio::inherit())
                     .spawn() {
@@ -97,25 +101,29 @@ impl <T: Terminal> Shell<T> {
         }
     }
 
-    fn remove_opts(&mut self, args: &[&str]) -> Result<(), Error> {
+    fn remove_opts<'a, I>(&mut self, args: I) -> Result<(), Error>
+        where I: IntoIterator<Item=&'a str> {
         self.update_command(|cmd| {
-            for opt in args.iter() {
+            for opt in args {
                 cmd.remove_opt(opt);
             }
         });
         Ok(())
     }
 
-    fn add_opts(&mut self, args: &[&str]) -> Result<(), Error> {
+    fn add_opts<'a, I>(&mut self, args: I) -> Result<(), Error>
+        where I: IntoIterator<Item=&'a str> {
         self.update_command(|cmd| {
-            for opt in args.iter() {
+            for opt in args {
                 cmd.add_opt(opt);
             }
         });
         Ok(())
     }
 
-    fn add_opt_arg(&mut self, args: &[&str]) -> Result<(), Error> {
+    fn add_opt_arg<'a, I>(&mut self, args: I) -> Result<(), Error>
+        where I: IntoIterator<Item=&'a str> {
+        let args = args.into_iter().collect_vec();
         if args.len() == 2 {
             self.update_command(|cmd| {
                 cmd.add_opt_arg(args.get(0).unwrap(), args.get(1).unwrap());

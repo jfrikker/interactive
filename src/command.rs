@@ -25,16 +25,18 @@ impl Command {
         &self.cmd
     }
 
-    fn cmdline(&self, rest: &[&str]) -> Vec<OsString> {
-        let mut result =self.args.clone();
+    fn cmdline<'a, I>(&self, rest: I) -> Vec<OsString>
+        where I: IntoIterator<Item=&'a str> {
+        let mut result = self.args.clone();
         result.extend(
-            rest.iter()
+            rest.into_iter()
                 .map(|s| OsString::from(s))
         );
         result
     }
 
-    pub fn build_command(&self, rest: &[&str]) -> process::Command {
+    pub fn build_command<'a, I>(&self, rest: I) -> process::Command
+        where I: IntoIterator<Item=&'a str> {
         let mut cmd = process::Command::new(&self.cmd);
         cmd.args(self.cmdline(rest));
         cmd
