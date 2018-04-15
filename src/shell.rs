@@ -40,7 +40,9 @@ impl <T: Terminal> Shell<T> {
     }
 
     pub fn enable_save_history(&mut self) {
-        self.read_history().err().map(|e| eprintln!("Error reading history: {}", e));
+        if let Err(e) = self.read_history() {
+            eprintln!("Error reading history: {}", e);
+        }
         self.save_history = true;
     }
 
@@ -67,7 +69,9 @@ impl <T: Terminal> Shell<T> {
         let add_to_history = {
             let mut args = split_command(&line).peekable();
             let empty = args.peek().is_none();
-            self.execute(args).err().map(|e| eprintln!("{}", e));
+            if let Err(e) = self.execute(args) {
+                eprintln!("{}", e);
+            }
             !empty
         };
 
@@ -89,12 +93,12 @@ impl <T: Terminal> Shell<T> {
             Some("+") => self.add_opts(args.skip(1)),
             Some("++") => self.add_opt_arg(args.skip(1)),
             _ => {
-                match self.cmd.build_command(args)
+                if let Err(e) = self.cmd.build_command(args)
                     .stdin(process::Stdio::inherit())
                     .stdout(process::Stdio::inherit())
-                    .spawn() {
-                    Ok(mut child) => { child.wait().unwrap(); },
-                    Err(e) => eprintln!("{}", e)
+                    .spawn()
+                    .and_then(|mut child| child.wait()) {
+                    eprintln!("{}", e);
                 }
                 Ok(())
             }
