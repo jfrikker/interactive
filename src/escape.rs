@@ -1,3 +1,11 @@
+pub fn escape(arg: &mut String) {
+    if arg.contains(' ') || arg.contains('\'')  {
+        *arg = arg.replace('\'', r#"'\''"#);
+        arg.insert(0, '\'');
+        arg.push('\'');
+    }
+}
+
 pub fn split_command<'a>(line: &'a str) -> Split<'a> {
     Split {
         rest: line,
@@ -89,7 +97,7 @@ enum ParseState {
 
 #[cfg(test)]
 mod tests {
-    use super::split_command;
+    use super::{escape, split_command};
 
     fn test_parse(line: &str, expected: Vec<&str>) {
         let actual: Vec<&str> = split_command(line).collect();
@@ -164,5 +172,26 @@ mod tests {
     #[test]
     fn adjacent_quotes() {
         test_parse("one'two'\"three\"'four five'", vec!("one", "two", "three", "four five"));
+    }
+
+    fn test_escape(input: &str, expected: &str) {
+        let mut s = input.into();
+        escape(&mut s);
+        assert_eq!(&s, expected);
+    }
+
+    #[test]
+    fn escape_normal() {
+        test_escape("abc", "abc");
+    }
+
+    #[test]
+    fn escape_space() {
+        test_escape("abc def", "'abc def'");
+    }
+
+    #[test]
+    fn escape_quote() {
+        test_escape(r#"abc'def"#, r#"'abc'\''def'"#);
     }
 }

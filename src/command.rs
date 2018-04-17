@@ -1,3 +1,4 @@
+use escape::escape;
 use itertools::Itertools;
 use std::ffi::{OsStr, OsString};
 use std::fmt;
@@ -90,7 +91,13 @@ impl fmt::Display for Command {
         if self.args.is_empty() {
             self.cmd.to_str().unwrap().fmt(f)
         } else {
-            write!(f, "{} {}", self.cmd.to_str().unwrap(), self.args.iter().map(|s| s.to_str().unwrap()).join(" "))
+            write!(f, "{} {}",
+                   self.cmd.to_str().unwrap(),
+                   self.args.iter().map(|s| {
+                       let mut arg = String::from(s.to_str().unwrap());
+                       escape(&mut arg);
+                       arg
+                   }).join(" "))
         }
     }
 }
