@@ -2,10 +2,10 @@
 extern crate dirs;
 extern crate itertools;
 extern crate linefeed;
+extern crate try_map;
 
 mod command;
 mod escape;
-mod history;
 mod shell;
 
 use command::Command;

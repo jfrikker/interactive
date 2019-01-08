@@ -1,14 +1,17 @@
 use command::Command;
 use escape::split_command;
-use history::{read_history, write_history};
 use itertools::Itertools;
-use linefeed::{DefaultTerminal, Reader, ReadResult, Terminal};
+use linefeed::{DefaultTerminal, Interface, ReadResult, Terminal};
+use std::fs::create_dir_all;
 use std::io;
 use std::iter::Peekable;
+use std::path::{PathBuf};
 use std::process;
+use dirs::home_dir;
+use try_map::FallibleMapExt;
 
 pub struct Shell<T: Terminal> {
-    reader: Reader<T>,
+    reader: Interface<T>,
     cmd: Command,
     last_cmd: Option<String>,
     save_history: bool
@@ -22,7 +25,7 @@ impl Shell<DefaultTerminal> {
 
 impl <T: Terminal> Shell<T> {
     pub fn with_term(term: T, cmd: Command) -> io::Result<Self> {
-        let reader = Reader::with_term("interactive", term)?;
+        let reader = Interface::with_term("interactive", term)?;
 
         let mut res = Shell {
             reader,
@@ -47,11 +50,7 @@ impl <T: Terminal> Shell<T> {
     }
 
     fn read_history(&mut self) -> io::Result<()> {
-        for lineres in read_history(self.cmd.get_command())? {
-            let line = lineres?;
-            self.reader.add_history(line);
-        }
-        Ok(())
+        self.prepare_history_path()?.map_or(Ok(()), |path| self.reader.load_history(path))
     }
 
     pub fn run(mut self) {
@@ -141,7 +140,7 @@ impl <T: Terminal> Shell<T> {
     fn update_command<F>(&mut self, f: F)
         where F: FnOnce(&mut Command) {
         f(&mut self.cmd);
-        self.reader.set_prompt(&format!("> {} ", self.cmd));
+        self.reader.set_prompt(&format!("> {} ", self.cmd)).unwrap();
     }
 
     fn add_history(&mut self, line: String) {
@@ -150,12 +149,25 @@ impl <T: Terminal> Shell<T> {
             self.last_cmd = Some(line)
         }
     }
+
+    fn prepare_history_path(&self) -> io::Result<Option<PathBuf>> {
+        home_dir()
+            .try_map(move |mut path| {
+                path.push(".interactive");
+                path.push("history");
+                create_dir_all(&path)?;
+                path.push(self.cmd.get_command());
+                println!("{:?}", path);
+                Ok(path)
+            })
+    }
 }
 
 impl <T: Terminal> Drop for Shell<T> {
     fn drop(&mut self) {
         if self.save_history {
-            if let Err(e) =  write_history(self.cmd.get_command(), self.reader.history()) {
+            if let Err(e) = self.prepare_history_path()
+                .and_then(|optpath| optpath.map_or(Ok(()), |path| self.reader.save_history(path))) {
                 eprintln!("\nError writing history: {}", e);
             }
         }
