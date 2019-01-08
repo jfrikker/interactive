@@ -1,8 +1,8 @@
-use std::env::home_dir;
 use std::ffi::OsStr;
 use std::fs::{File, create_dir, metadata};
 use std::io::{self, BufRead, BufReader, BufWriter, Lines, Write};
 use std::path::{Path, PathBuf};
+use dirs::home_dir;
 
 pub fn read_history(cmd: &OsStr) -> io::Result<HistoryIterator> {
     match prepare_history_path(cmd)? {

@@ -7,6 +7,7 @@ authors = ["Joe Frikker <jfrikker@gmail.com>"]
 panic = "abort"
 
 [dependencies]
-linefeed = "0.4"
+dirs = "1.0"
 itertools = "0.7.8"
+linefeed = "0.4"
 quick-error = "1.2.1"

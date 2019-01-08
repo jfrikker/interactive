@@ -1,4 +1,5 @@
 #[macro_use] extern crate quick_error;
+extern crate dirs;
 extern crate itertools;
 extern crate linefeed;
 
