@@ -3,12 +3,15 @@ use escape::split_command;
 use itertools::Itertools;
 use linefeed::{DefaultTerminal, Interface, ReadResult, Terminal};
 use std::fs::{self, create_dir_all};
+use nix::sys::signal;
 use std::io;
 use std::iter::Peekable;
 use std::path::{PathBuf};
 use std::process;
 use dirs::home_dir;
 use try_map::FallibleMapExt;
+
+use std::os::unix::process::CommandExt;
 
 pub struct Shell<T: Terminal> {
     reader: Interface<T>,
@@ -92,13 +95,28 @@ impl <T: Terminal> Shell<T> {
             Some("+") => self.add_opts(args.skip(1)),
             Some("++") => self.add_opt_arg(args.skip(1)),
             _ => {
+                let old_sig = unsafe {
+                    signal::signal(signal::Signal::SIGINT, signal::SigHandler::SigIgn).unwrap()
+                };
+
                 if let Err(e) = self.cmd.build_command(args)
                     .stdin(process::Stdio::inherit())
                     .stdout(process::Stdio::inherit())
+                    .before_exec(|| {
+                        unsafe {
+                            signal::signal(signal::Signal::SIGINT, signal::SigHandler::SigDfl).unwrap();
+                            Ok(())
+                        }
+                    })
                     .spawn()
                     .and_then(|mut child| child.wait()) {
                     eprintln!("{}", e);
                 }
+                
+                unsafe {
+                    signal::signal(signal::Signal::SIGINT, old_sig).unwrap();
+                }
+
                 Ok(())
             }
         }

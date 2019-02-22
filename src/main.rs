@@ -2,6 +2,7 @@
 extern crate dirs;
 extern crate itertools;
 extern crate linefeed;
+extern crate nix;
 extern crate try_map;
 
 mod command;
