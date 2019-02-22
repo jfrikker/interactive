@@ -2,7 +2,7 @@ use command::Command;
 use escape::split_command;
 use itertools::Itertools;
 use linefeed::{DefaultTerminal, Interface, ReadResult, Terminal};
-use std::fs::create_dir_all;
+use std::fs::{self, create_dir_all};
 use std::io;
 use std::iter::Peekable;
 use std::path::{PathBuf};
@@ -157,7 +157,8 @@ impl <T: Terminal> Shell<T> {
                 path.push("history");
                 create_dir_all(&path)?;
                 path.push(self.cmd.get_command());
-                println!("{:?}", path);
+
+                fs::OpenOptions::new().append(true).create(true).open(&path)?;
                 Ok(path)
             })
     }
