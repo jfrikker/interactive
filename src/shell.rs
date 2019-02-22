@@ -29,6 +29,7 @@ impl Shell<DefaultTerminal> {
 impl <T: Terminal> Shell<T> {
     pub fn with_term(term: T, cmd: Command) -> io::Result<Self> {
         let reader = Interface::with_term("interactive", term)?;
+        reader.set_history_size(1000);
 
         let mut res = Shell {
             reader,
