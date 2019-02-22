@@ -5,6 +5,7 @@ authors = ["Joe Frikker <jfrikker@gmail.com>"]
 
 [profile.release]
 panic = "abort"
+lto = true
 
 [dependencies]
 dirs = "1.0"
