@@ -10,13 +10,13 @@ pub struct Command {
 }
 
 impl Command {
-    pub fn new<I, T>(args: I) -> Command
+    pub fn new<I, T>(args: I) -> Self
         where I: IntoIterator<Item=T>,
               T: Into<OsString> {
         let mut iter = args.into_iter();
         let cmd = iter.next().unwrap().into();
-        let args = iter.map(|arg| arg.into()).collect();
-        Command {
+        let args = iter.map(Into::into).collect();
+        Self {
             cmd,
             args
         }

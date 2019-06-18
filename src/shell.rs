@@ -22,7 +22,7 @@ pub struct Shell<T: Terminal> {
 
 impl Shell<DefaultTerminal> {
     pub fn new(cmd: Command) -> io::Result<Self> {
-        Shell::with_term(DefaultTerminal::new()?, cmd)
+        Self::with_term(DefaultTerminal::new()?, cmd)
     }
 }
 
@@ -31,7 +31,7 @@ impl <T: Terminal> Shell<T> {
         let reader = Interface::with_term("interactive", term)?;
         reader.set_history_size(1000);
 
-        let mut res = Shell {
+        let mut res = Self {
             reader,
             cmd,
             last_cmd: None,
