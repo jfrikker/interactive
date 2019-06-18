@@ -90,7 +90,7 @@ impl <T: Terminal> Shell<T> {
 
     fn execute<'a, I>(&mut self, mut args: Peekable<I>) -> Result<(), Error>
         where I: Iterator<Item=&'a str> {
-        match args.peek().map(|arg| *arg) {
+        match args.peek().cloned() {
             None => Ok(()),
             Some("-") => self.remove_opts(args.skip(1)),
             Some("+") => self.add_opts(args.skip(1)),

@@ -31,7 +31,7 @@ impl Command {
         let mut result = self.args.clone();
         result.extend(
             rest.into_iter()
-                .map(|s| OsString::from(s))
+                .map(OsString::from)
         );
         result
     }
@@ -52,7 +52,7 @@ impl Command {
             if found_arg {
                 found_arg = false;
 
-                if !arg.to_str().unwrap().starts_with("-") {
+                if !arg.to_str().unwrap().starts_with('-') {
                     return false;
                 }
             }
@@ -69,7 +69,7 @@ impl Command {
     pub fn add_opt(&mut self, opt: &str) {
         self.remove_opt(opt);
 
-        let full_opt = if opt.starts_with("-") {
+        let full_opt = if opt.starts_with('-') {
             OsString::from(opt)
         } else if opt.len() == 1 {
             OsString::from(String::from("-") + opt)

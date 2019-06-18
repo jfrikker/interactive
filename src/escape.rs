@@ -6,7 +6,7 @@ pub fn escape(arg: &mut String) {
     }
 }
 
-pub fn split_command<'a>(line: &'a str) -> Split<'a> {
+pub fn split_command(line: &str) -> Split<'_> {
     Split {
         rest: line,
         state: ParseState::Normal,
